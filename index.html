@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Íslenzk Farm Tycoon — v2</title>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+<style>
+  :root{
+    --iceland-blue:#003897; --iceland-red:#D72828; --iceland-white:#ffffff;
+    --soil:#6b4e28; --soil-dark:#4e371d; --text:#0b0f1a;
+  }
+  html,body{ background:#f6f8ff; color:var(--text); }
+  .nav-wrapper{
+    background: linear-gradient(135deg, var(--iceland-blue) 0 62%, var(--iceland-red) 62% 64%, var(--iceland-white) 64% 66%, var(--iceland-blue) 66% 100%);
+  }
+  .brand-logo{ font-weight:800; letter-spacing:.2px; }
+  .currency-badge{
+    background: var(--iceland-red); color:#fff; border-radius:999px;
+    padding:.35rem .75rem; font-weight:800; display:inline-flex; align-items:center; gap:.35rem;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2);
+  }
+  .btn, .btn-large{ background:var(--iceland-blue) !important; text-transform:none; border-radius:999px; font-weight:800; }
+  .btn.redish{ background:var(--iceland-red)!important; }
+  .card{ border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .tabs .tab a{ color:var(--iceland-blue); font-weight:700; }
+  .tabs .indicator{ background:var(--iceland-red); }
+  .pill{ padding:.15rem .5rem; border-radius:999px; font-weight:700; font-size:.75rem; }
+  .pill.blue{ background:var(--iceland-blue); color:#fff; }
+  .pill.red{ background:var(--iceland-red); color:#fff; }
+  .farm{ display:grid; grid-template-columns: repeat(var(--cols,3), 1fr); gap:10px; }
+  .plot{
+    position:relative; aspect-ratio:1/1; border-radius:14px; overflow:hidden;
+    background: linear-gradient(180deg, var(--soil), var(--soil-dark));
+    border:3px solid rgba(0,0,0,.12); box-shadow: inset 0 8px 16px rgba(0,0,0,.25), 0 8px 18px rgba(0,0,0,.08);
+    display:flex; align-items:center; justify-content:center; touch-action: manipulation;
+  }
+  .plot.empty::after{ content:"+"; position:absolute; font-size:2rem; color:#fff9; font-weight:900; }
+  .slot-label{ position:absolute; top:6px; left:8px; font-size:.75rem; font-weight:800; color:#fff; opacity:.9; background:rgba(0,0,0,.25); padding:.2rem .4rem; border-radius:6px; }
+  .seed-ghost{ position:absolute; bottom:6px; right:6px; font-size:.7rem; font-weight:800; color:#fff; opacity:.9; background:rgba(0,0,0,.25); padding:.2rem .4rem; border-radius:6px; }
+  .plant{
+    width:70%; height:70%; border-radius:10px; display:flex; align-items:center; justify-content:center; padding:.4rem; color:#fff; font-weight:900; text-align:center;
+    background: radial-gradient(ellipse at center, #6ecb63 0%, #2e8b57 60%, #256b45 100%);
+    box-shadow: inset 0 4px 10px rgba(255,255,255,.25), inset 0 -6px 12px rgba(0,0,0,.25);
+    transform: translateY(4px) scale(.9); transition: transform .2s ease;
+  }
+  .plant.growing{ animation:bob 1.4s ease-in-out infinite; }
+  .plant.ready{ background: radial-gradient(ellipse at center, #a1e27a 0%, #48b342 60%, #2f8b2a 100%); transform: translateY(0) scale(1); box-shadow: 0 10px 18px rgba(0,0,0,.25), inset 0 6px 14px rgba(255,255,255,.25); }
+  @keyframes bob{ 0%,100%{ transform:translateY(4px) scale(.92);} 50%{ transform:translateY(-1px) scale(.94);} }
+  .progress-wrap{ position:absolute; bottom:8px; left:8px; right:8px; height:10px; background: #ffffff40; border-radius:999px; overflow:hidden; backdrop-filter: blur(2px); }
+  .progress-fill{ height:100%; width:0%; background: linear-gradient(90deg, var(--iceland-red), var(--iceland-blue)); transition: width .2s linear; }
+  .store-item, .upgrade-item{
+    border:2px solid rgba(0,0,0,.06); border-radius:14px; padding:.75rem; background:#fff;
+    display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.75rem;
+  }
+  .meta{ display:flex; flex-direction:column; }
+  .meta .name{ font-weight:900; }
+  .soft{ opacity:.75; }
+  .footer-note{ font-size:.8rem; opacity:.7; text-align:center; margin:1.2rem 0 2.5rem; }
+  .badge-mini{ font-weight:900; background:#fff; color:var(--iceland-blue); border:2px solid var(--iceland-blue); border-radius:10px; padding:.15rem .4rem; }
+  .section-title{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-wrapper">
+      <a href="#!" class="brand-logo center">Íslenzk Farm Tycoon v2</a>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top:14px;">
+    <div class="card">
+      <div class="card-content" style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+        <span class="currency-badge">
+          <i class="material-icons">paid</i>
+          <span id="money">ISK 0</span>
+        </span>
+        <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+          <span id="weatherBadge" class="pill blue">Weather: —</span>
+          <span id="prestigeBadge" class="badge-mini">Saga 0</span>
+          <a id="resetBtn" class="btn redish waves-effect waves-light"><i class="material-icons left">refresh</i>Reset</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-content">
+        <ul id="tabs" class="tabs">
+          <li class="tab col s3"><a class="active" href="#tab-farm"><i class="material-icons" style="vertical-align:middle">agriculture</i> Farm</a></li>
+          <li class="tab col s3"><a href="#tab-shop"><i class="material-icons" style="vertical-align:middle">local_florist</i> Shop</a></li>
+          <li class="tab col s3"><a href="#tab-upgrades"><i class="material-icons" style="vertical-align:middle">upgrade</i> Upgrades</a></li>
+          <li class="tab col s3"><a href="#tab-prestige"><i class="material-icons" style="vertical-align:middle">whatshot</i> Prestige</a></li>
+        </ul>
+      </div>
+      <div id="tab-farm" class="card-content">
+        <div class="section-title">
+          <span class="card-title">Your Land</span>
+          <span class="pill red soft">Tap dirt to plant • Tap ready crop to harvest</span>
+        </div>
+        <div id="farm" class="farm"></div>
+      </div>
+      <div id="tab-shop" class="card-content">
+        <div class="section-title">
+          <span class="card-title">Seed Shop</span>
+          <span class="pill blue soft">Select a seed to plant</span>
+        </div>
+        <div id="store"></div>
+      </div>
+      <div id="tab-upgrades" class="card-content">
+        <span class="card-title">Upgrades & Expansion</span>
+        <div id="upgrades"></div>
+      </div>
+      <div id="tab-prestige" class="card-content">
+        <span class="card-title">Saga Reset (Prestige)</span>
+        <p class="soft" style="margin-top:.25rem">
+          Reset for a permanent **Icelandic Saga Bonus**: +10% ISK from all harvests per saga level.
+          You’ll keep only your unlocked grid size (land) and the saga bonus. Everything else resets.
+        </p>
+        <div class="store-item">
+          <div class="meta">
+            <span class="name">Begin a New Saga</span>
+            <span>Reward: +10% permanent yield (stacks). Requirement: <b>ISK 25,000</b> in lifetime earnings.</span>
+          </div>
+          <a id="prestigeBtn" class="btn waves-effect waves-light"><i class="material-icons left">whatshot</i>Reset & Ascend</a>
+        </div>
+        <div>
+          <span class="pill blue">Lifetime ISK: <b id="lifetimeIsk">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Weather rotates every ~15 minutes (Sun = faster growth, Rain = +yield, Storm = mixed).
+      Offline earnings: crops that mature while away are auto-sold at 80% value (up to 3h offline).
+    </p>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js" defer></script>
+<script>
+(() => {
+  // ========= Constants =========
+  const ISKf = new Intl.NumberFormat('is-IS', { style:'currency', currency:'ISK', maximumFractionDigits:0 });
+  const VERSION = 2;
+  const MAX_OFFLINE_MIN = 180;
+
+  const SEEDS = [
+    { id:'barley',  name:'Barley',  rarity:'Common', cost:   50, growMs: 20_000, yield:  90,  emoji:'🌾' },
+    { id:'potato',  name:'Potato',  rarity:'Common', cost:  120, growMs: 45_000, yield: 230,  emoji:'🥔' },
+    { id:'carrot',  name:'Carrot',  rarity:'Uncommon', cost:220, growMs: 75_000, yield: 420,  emoji:'🥕' },
+    { id:'turnip',  name:'Turnip',  rarity:'Uncommon', cost:480, growMs:120_000, yield: 960,  emoji:'🫒' },
+    { id:'blueberry',name:'Blueberry',rarity:'Rare',  cost:1200, growMs:240_000, yield: 2600, emoji:'🫐' },
+    { id:'saffron', name:'Saffron', rarity:'Epic',    cost:3800, growMs:600_000, yield: 9000, emoji:'🧄' }
+  ];
+
+  const WEATHER_TYPES = [
+    { key:'sun',   name:'Sunny',   desc:'+25% growth speed', growMult:0.75, yieldMult:1.00, icon:'wb_sunny' },
+    { key:'rain',  name:'Rainy',   desc:'+20% yield',        growMult:1.00, yieldMult:1.20, icon:'grain' },
+    { key:'storm', name:'Stormy',  desc:'+10% yield, -10% speed', growMult:1.10, yieldMult:1.10, icon:'flash_on' }
+  ];
+
+  const UPGRADES = [
+    { id:'watering', name:'Watering Can',  desc:'Grow time -10% per level (max 5)', baseCost: 500,  max:5, type:'speed' },
+    { id:'fertilizer', name:'Fertilizer',  desc:'Yield +10% per level (max 5)',     baseCost: 800,  max:5, type:'yield' },
+    { id:'market', name:'Farmers’ Market', desc:'+5% sell price per level (max 5)', baseCost: 1200, max:5, type:'sell' },
+    { id:'expand4', name:'Expand Land (4×4)', desc:'Unlock a 4×4 field', baseCost: 2000, max:1, type:'expand', size:4 },
+    { id:'expand5', name:'Expand Land (5×5)', desc:'Unlock a 5×5 field', baseCost: 9000, max:1, type:'expand', size:5 },
+  ];
+
+  // ========= State =========
+  const defaultState = () => ({
+    version: VERSION,
+    money: 500,
+    lifetimeIsk: 0,
+    selectedSeedId: null,
+    gridSize: 3, // 3x3 start
+    plots: Array.from({length: 3*3}, () => ({ seedId:null, plantedAt:0, growMs:0, ready:false })),
+    upgrades: { watering:0, fertilizer:0, market:0, expand4:0, expand5:0 },
+    sagaLevel: 0,
+    lastSeen: Date.now()
+  });
+
+  let state = load();
+  migrateIfNeeded();
+  const DOM = {
+    money: document.getElementById('money'),
+    lifetime: document.getElementById('lifetimeIsk'),
+    farm: document.getElementById('farm'),
+    store: document.getElementById('store'),
+    upgrades: document.getElementById('upgrades'),
+    resetBtn: document.getElementById('resetBtn'),
+    prestigeBtn: document.getElementById('prestigeBtn'),
+    prestigeBadge: document.getElementById('prestigeBadge'),
+    weatherBadge: document.getElementById('weatherBadge'),
+  };
+
+  // ========= Persistence =========
+  function load(){
+    try{
+      const raw = localStorage.getItem('isl_farm_state_v2');
+      if(!raw) return defaultState();
+      return JSON.parse(raw);
+    }catch(e){ return defaultState(); }
+  }
+  function save(){ localStorage.setItem('isl_farm_state_v2', JSON.stringify(state)); }
+  function migrateIfNeeded(){
+    if(!state.version || state.version < VERSION){
+      // simple migration: ensure fields exist
+      state.version = VERSION;
+      if(!('lifetimeIsk' in state)) state.lifetimeIsk = 0;
+      if(!('sagaLevel' in state)) state.sagaLevel = 0;
+      if(!('upgrades' in state)) state.upgrades = { watering:0, fertilizer:0, market:0, expand4:0, expand5:0 };
+      if(!('gridSize' in state)) state.gridSize = 3;
+      const needed = state.gridSize*state.gridSize;
+      if(!state.plots || state.plots.length !== needed){
+        state.plots = Array.from({length:needed}, ()=>({seedId:null, plantedAt:0, growMs:0, ready:false}));
+      }
+      if(!('lastSeen' in state)) state.lastSeen = Date.now();
+      save();
+    }
+  }
+
+  // ========= Weather (rotates ~15m) =========
+  function currentWeather(){
+    const sliceMs = 15*60*1000;
+    const idx = Math.floor(Date.now()/sliceMs) % WEATHER_TYPES.length;
+    return WEATHER_TYPES[idx];
+  }
+  function setWeatherBadge(){
+    const w = currentWeather();
+    DOM.weatherBadge.textContent = `Weather: ${w.name} — ${w.desc}`;
+  }
+
+  // ========= Economy Helpers =========
+  function yieldMult(){
+    const fert = state.upgrades.fertilizer || 0;
+    const sell = state.upgrades.market || 0;
+    const saga = state.sagaLevel * 0.10;
+    const weather = currentWeather().yieldMult;
+    return (1 + fert*0.10) * (1 + sell*0.05) * (1 + saga) * weather;
+  }
+  function speedMult(){
+    const water = state.upgrades.watering || 0;
+    const weather = currentWeather().growMult;
+    return (1 - water*0.10) * weather; // lower is faster
+  }
+  function effectiveGrowMs(baseMs){
+    return Math.max(500, Math.round(baseMs * speedMult()));
+  }
+  function fmtISK(n){ return ISKf.format(Math.max(0, Math.floor(n))); }
+
+  // ========= Build UI =========
+  function renderMoney(){ DOM.money.textContent = fmtISK(state.money); }
+  function renderBadges(){
+    DOM.prestigeBadge.textContent = `Saga ${state.sagaLevel}`;
+    DOM.lifetime.textContent = fmtISK(state.lifetimeIsk);
+    setWeatherBadge();
+  }
+
+  function rebuildFarmGrid(){
+    DOM.farm.style.setProperty('--cols', state.gridSize);
+    DOM.farm.innerHTML = '';
+    ensurePlotCount();
+
+    for(let i=0;i<state.plots.length;i++){
+      const plot = state.plots[i];
+      const cell = document.createElement('div');
+      cell.className = 'plot ' + (plot.seedId ? '' : 'empty');
+      cell.addEventListener('click', ()=> onPlotClick(i));
+
+      const label = document.createElement('div');
+      label.className='slot-label'; label.textContent = `#${i+1}`;
+      cell.appendChild(label);
+
+      if(!plot.seedId){
+        const ghost = document.createElement('div');
+        ghost.className='seed-ghost'; ghost.textContent='Empty';
+        cell.appendChild(ghost);
+      }else{
+        const seed = getSeed(plot.seedId);
+        const plant = document.createElement('div');
+        plant.className = 'plant growing';
+        plant.innerHTML = `<div>${seed.emoji}<br>${seed.name}</div>`;
+        cell.appendChild(plant);
+
+        const pw = document.createElement('div'); pw.className='progress-wrap';
+        const pf = document.createElement('div'); pf.className='progress-fill'; pf.id = `pfill-${i}`;
+        pw.appendChild(pf); cell.appendChild(pw);
+      }
+      DOM.farm.appendChild(cell);
+    }
+  }
+
+  function buildStore(){
+    DOM.store.innerHTML = '';
+    SEEDS.forEach(seed=>{
+      const row = document.createElement('div'); row.className='store-item';
+      row.innerHTML = `
+        <div class="meta">
+          <span class="name">${seed.emoji} ${seed.name} <span class="soft">(${seed.rarity})</span></span>
+          <span>Grow: ${(seed.growMs/1000)|0}s • Yield: ${fmtISK(seed.yield)}</span>
+          <div style="margin-top:.25rem;">
+            <span class="pill blue">Cost: ${fmtISK(seed.cost)}</span>
+          </div>
+        </div>
+        <div>
+          <a class="btn waves-effect waves-light"><i class="material-icons left">local_florist</i>Select</a>
+        </div>`;
+      const btn = row.querySelector('a.btn');
+      btn.addEventListener('click', ()=>{
+        state.selectedSeedId = seed.id; save();
+        M.toast({html:`Selected ${seed.name}`});
+      });
+      DOM.store.appendChild(row);
+    });
+  }
+
+  function buildUpgrades(){
+    DOM.upgrades.innerHTML = '';
+    UPGRADES.forEach(up=>{
+      const lvl = state.upgrades[up.id] || 0;
+      const owned = lvl >= (up.max||Infinity);
+      const price = Math.floor(up.baseCost * Math.pow(1.8, lvl));
+      const row = document.createElement('div'); row.className='upgrade-item';
+      const extra = up.type==='expand' ? `Land → ${up.size}×${up.size}` : '';
+      row.innerHTML = `
+        <div class="meta">
+          <span class="name">${up.name} ${extra?`<span class="soft">(${extra})</span>`:''}</span>
+          <span>${up.desc}</span>
+          <div style="margin-top:.25rem;">
+            <span class="pill blue">Level: ${lvl}/${up.max}</span>
+            <span class="pill red">Cost: ${fmtISK(price)}</span>
+          </div>
+        </div>
+        <div>
+          <a class="btn ${owned?'disabled':''} waves-effect waves-light"><i class="material-icons left">shopping_cart</i>${owned?'Maxed':'Buy'}</a>
+        </div>`;
+      const btn = row.querySelector('a.btn');
+      btn.addEventListener('click', ()=>{
+        if(owned) return;
+        buyUpgrade(up, price);
+      });
+      DOM.upgrades.appendChild(row);
+    });
+  }
+
+  // ========= Logic =========
+  function getSeed(id){ return SEEDS.find(s=>s.id===id); }
+
+  function ensurePlotCount(){
+    const need = state.gridSize * state.gridSize;
+    if(state.plots.length < need){
+      const extra = Array.from({length: need - state.plots.length}, ()=>({seedId:null, plantedAt:0, growMs:0, ready:false}));
+      state.plots = state.plots.concat(extra);
+    }else if(state.plots.length > need){
+      state.plots = state.plots.slice(0, need);
+    }
+  }
+
+  function onPlotClick(idx){
+    const p = state.plots[idx];
+    const now = Date.now();
+
+    // Harvest if ready
+    if(p.seedId){
+      const seed = getSeed(p.seedId);
+      const growMs = effectiveGrowMs(p.growMs || seed.growMs);
+      const done = now - p.plantedAt >= growMs;
+      if(done){
+        const gain = Math.floor(seed.yield * yieldMult());
+        state.money += gain;
+        state.lifetimeIsk += gain;
+        state.plots[idx] = { seedId:null, plantedAt:0, growMs:0, ready:false };
+        renderMoney(); save(); rebuildFarmGrid();
+        M.toast({html:`Harvested ${seed.name} for ${fmtISK(gain)}`});
+        return;
+      }
+    }
+
+    // Plant if empty
+    if(!p.seedId){
+      const seed = getSeed(state.selectedSeedId);
+      if(!seed){ M.toast({html:'Select a seed in the Shop first.'}); return; }
+      if(state.money < seed.cost){ M.toast({html:'Not enough ISK.'}); return; }
+      state.money -= seed.cost;
+      state.plots[idx] = { seedId:seed.id, plantedAt: now, growMs: seed.growMs, ready:false };
+      renderMoney(); save(); rebuildFarmGrid();
+      M.toast({html:`Planted ${seed.name} in slot #${idx+1}`});
+    }
+  }
+
+  function buyUpgrade(up, price){
+    if(state.money < price){ M.toast({html:'Not enough ISK.'}); return; }
+
+    // Expansion guard: only allow 4x4 before 5x5
+    if(up.type==='expand'){
+      if(up.size===5 && state.upgrades['expand4']===0){
+        M.toast({html:'Unlock 4×4 first.'}); return;
+      }
+    }
+
+    state.money -= price;
+    state.upgrades[up.id] = (state.upgrades[up.id]||0)+1;
+
+    if(up.type==='expand'){
+      state.gridSize = Math.max(state.gridSize, up.size);
+      ensurePlotCount();
+      rebuildFarmGrid();
+      M.toast({html:`Land expanded to ${up.size}×${up.size}!`});
+    }else{
+      M.toast({html:`${up.name} upgraded to Lv.${state.upgrades[up.id]}`});
+    }
+
+    renderMoney(); save(); buildUpgrades();
+  }
+
+  // ========= Ticker =========
+  function tick(){
+    const now = Date.now();
+    state.plots.forEach((p, i)=>{
+      if(!p.seedId) return;
+      const seed = getSeed(p.seedId);
+      const gMs = effectiveGrowMs(p.growMs || seed.growMs);
+      const pct = Math.min(1, (now - p.plantedAt) / gMs);
+      const fill = document.getElementById(`pfill-${i}`);
+      if(fill) fill.style.width = (pct*100).toFixed(1)+'%';
+
+      const plotEl = DOM.farm.children[i];
+      const plantEl = plotEl ? plotEl.querySelector('.plant') : null;
+      const ready = pct >= 1;
+      if(plantEl){
+        if(ready){
+          plantEl.classList.add('ready'); plantEl.classList.remove('growing');
+          plantEl.innerHTML = `<div>✅ Ready!<br>Tap to harvest</div>`;
+        }else{
+          if(!plantEl.classList.contains('growing')){
+            plantEl.classList.add('growing'); plantEl.classList.remove('ready');
+            plantEl.innerHTML = `<div>${seed.emoji}<br>${seed.name}</div>`;
+          }
+        }
+      }
+    });
+
+    // weather badge might change every 15m
+    if(Math.floor(now/(15*60*1000)) !== Math.floor((now-1000)/(15*60*1000))){
+      renderBadges();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // ========= Offline Earnings =========
+  function applyOfflineEarnings(){
+    const now = Date.now();
+    let offlineMs = Math.min(MAX_OFFLINE_MIN*60*1000, now - (state.lastSeen || now));
+    if(offlineMs <= 0) return;
+
+    let earned = 0;
+    state.plots.forEach((p, idx)=>{
+      if(!p.seedId) return;
+      const seed = getSeed(p.seedId);
+      let gMs = effectiveGrowMs(p.growMs || seed.growMs);
+      const elapsed = now - p.plantedAt;
+      if(elapsed >= gMs){
+        // Auto-sell at 80% (market tax), keep plot empty
+        const gain = Math.floor(seed.yield * yieldMult() * 0.8);
+        earned += gain;
+        p.seedId = null; p.plantedAt = 0; p.growMs = 0; p.ready = false;
+      }else{
+        // Advance timer proportionally to offline time
+        const advanced = Math.min(gMs - elapsed, offlineMs);
+        p.plantedAt -= advanced; // bring closer to completion
+      }
+    });
+
+    if(earned>0){
+      state.money += earned;
+      state.lifetimeIsk += earned;
+      M.toast({html:`Offline earnings: ${fmtISK(earned)}`});
+    }
+  }
+
+  // ========= Prestige =========
+  function tryPrestige(){
+    const need = 25_000;
+    if(state.lifetimeIsk < need){ M.toast({html:'Earn at least ISK 25,000 lifetime first.'}); return; }
+    if(!confirm('Begin a new Saga? This resets seeds, money, and upgrades (except land). You gain +10% permanent yield.')){
+      return;
+    }
+    state.sagaLevel += 1;
+    const keepSize = state.gridSize;
+
+    // full reset
+    state = defaultState();
+    state.gridSize = keepSize;
+    ensurePlotCount();
+    save();
+    renderAll();
+    M.toast({html:`Saga ${state.sagaLevel} begun! Permanent +${state.sagaLevel*10}% yield.`});
+  }
+
+  // ========= Render All =========
+  function renderAll(){
+    renderMoney();
+    renderBadges();
+    rebuildFarmGrid();
+    buildStore();
+    buildUpgrades();
+  }
+
+  // ========= Init =========
+  function init(){
+    const tabs = document.getElementById('tabs');
+    M.Tabs.init(tabs);
+
+    applyOfflineEarnings();
+    state.lastSeen = Date.now();
+    save();
+
+    renderAll();
+    requestAnimationFrame(tick);
+
+    DOM.resetBtn.addEventListener('click', ()=>{
+      if(confirm('Reset ALL progress (including saga level and land)?')){
+        localStorage.removeItem('isl_farm_state_v2');
+        state = defaultState();
+        renderAll(); save();
+        M.toast({html:'Progress reset.'});
+      }
+    });
+
+    DOM.prestigeBtn.addEventListener('click', tryPrestige);
+
+    window.addEventListener('beforeunload', ()=>{
+      state.lastSeen = Date.now(); save();
+    });
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden){
+        state.lastSeen = Date.now(); save();
+      }else{
+        applyOfflineEarnings();
+        state.lastSeen = Date.now(); save();
+        renderAll();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init, {once:true});
+})();
+</script>
+</body>
+</html>
